@@ -52,9 +52,10 @@ def construct_data_set(file_name):
     """
     Function that reads a tsv file into the memory.
     """
+    print("constructing data set for {0}".format(file_name))
     data_set = []
     paraphrase_df = pd.read_csv(file_name, sep='\t', header=None, names=["label", "text_a", "text_b", "id"])
-    for index in range(len(paraphrase_df)):
+    for index in tqdm(range(len(paraphrase_df))):
         label = paraphrase_df.iloc[index, :]['label']
         text_a = paraphrase_df.iloc[index, :]['text_a']
         text_b = paraphrase_df.iloc[index, :]['text_b']
@@ -163,15 +164,15 @@ def process_text_dataset(dataset, window_size, n, topk=None, ngram_indexer=None)
         dataset[i].set_ngram(ngrams_a=ngrams_a, ngrams_b=ngrams_b)
     # select top k ngram
     # TODO: Get pre-trained ngram indexer here
-    # if ngram_indexer is None:
-    #     ngram_indexer = construct_ngram_indexer([datum.ngram for datum in dataset], topk)
+    if ngram_indexer is None:
+        print()
+        ngram_indexer = construct_ngram_indexer([datum.ngrams_a for datum in dataset], topk)
+        #ngram_indexer.update(construct_ngram_indexer([datum.ngrams_b for datum in dataset], topk))
     # vectorize each datum
     for i in range(len(dataset)):
         dataset[i].set_ngrams_idx(ngrams_idx_a=phrases_ngrams_to_index(dataset[i].ngrams_a, ngram_indexer),
                                   ngrams_idx_b=phrases_ngrams_to_index(dataset[i].ngrams_b, ngram_indexer))
     return dataset, ngram_indexer
-
-
 
 
 def construct_data_loader(processed_data, batch_size, shuffle=True):
@@ -193,6 +194,7 @@ def construct_ngram_indexer(ngram_counter_list, topk):
     # find the top k ngram
     # maps the ngram to an unique index
     ngram_counter = Counter()
+    print(ngram_counter_list[0])
     for counter in tqdm(ngram_counter_list):
         ngram_counter.update(counter)
     ngram_counter_topk = ngram_counter.most_common(topk)
@@ -220,9 +222,6 @@ def collate_func(batch):
                             mode="constant", constant_values=0)
         data_list.append(padded_vec)
     return [torch.from_numpy(np.array(data_list)), torch.LongTensor(length_list), torch.LongTensor(label_list)]
-
-
-
 
 
 # TODO: To decide if we need to use h5py format to save the data.
