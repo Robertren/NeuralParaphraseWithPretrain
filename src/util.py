@@ -230,6 +230,7 @@ def construct_ngram_indexer(ngram_counter_list, topk):
 
 #TODO: To decide if we need a collate function
 def collate_func(batch):
+    # this function has been deprecated
     """
     Customized function for DataLoader that dynamically pads the batch so that all
     data have the same length
