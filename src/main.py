@@ -1,9 +1,10 @@
 import numpy
 import torch
 import pickle
+from torch.autograd import Variable
 import argparse
-from util import *
-# from model import *
+from .util import *
+from .model import *
 def calculate_aligned_phrases(dot_products, phrases_a, phrases_b, biases, self_attention = False):
     """
     :param dot_products: A list of dot products that came from first attend feed forward network
@@ -31,39 +32,50 @@ def concat_representation(phrases, aligned_phrase):
     return torch.cat((phrases, aligned_phrase), 1)
 
 
-def train_model(num_epochs, optimizer, train_loader, test_loader, cuda, batch_size, data_length, model_dir):
-    step = 0
-    epoch = 0
-    total_batches = int(len(training_set) / batch_size)
-    while epoch <= num_epochs:
+
+def test_model(loader, model, k, cuda):
+    """
+    Help function that tests the model's performance on a dataset
+    @param: loader - data loader for the dataset to test against
+        """
+    correct = 0
+    total = 0
+    model.eval()
+    for data, lengths, labels in loader:
+        data_batch, length_batch, label_batch = Variable(data), Variable(lengths), Variable(labels)
+        if cuda:
+            data_batch, length_batch, label_batch = data_batch.cuda(), length_batch.cuda(), label_batch.cuda()
+        outputs = model(data_batch, length_batch)
+        predicted = torch.topk(outputs.data, k, dim=1)[1]
+        predicted = predicted.cpu().numpy()
+        label_batch = label_batch.cpu().data.numpy()
+        total += len(label_batch)
+        correct += sum([label_batch[i] in predicted[i] for i in range(len(label_batch))])
         model.train()
-        vectors, labels = get_batch(next(training_iter))
-        vectors = Variable(torch.stack(vectors).squeeze())  # batch_size, seq_len
-        labels = Variable(torch.stack(labels).squeeze())
+    return 100 * correct / total
 
-        model.zero_grad()
+def train_model(num_epochs, optimizer, train_loader, test_loader, cuda, batch_size, length, model_dir):
+    for epoch in range(num_epochs):
+        # TODO: Save model torch.save(model.state_dict(), model_dir + "epoch{0}.pth".format(str(epoch)))
+        for sentence_data_a, sentence_data_b, labels in enumerate(train_loader):
+            sentence_data_a, sentence_data_b, label_batch = Variable(sentence_data_a), Variable(sentence_data_b), Variable(labels)
+            if cuda:
+                data_batch, length_batch, label_batch = data_batch.cuda(), length_batch.cuda(), label_batch.cuda()
+            optimizer.zero_grad()
+            # nn.squential look
+            outputs = model_list(sentence_data_a, sentence_data_b)
+            loss = nn.functional.binary_cross_entropy(outputs, label_batch)
+            loss.backward()
+            optimizer.step()
+            # check here
 
-        if lstm:
-            hidden, c_t = model.init_hidden()
-            output, hidden = model(vectors, hidden, c_t)
-        else:
-            hidden = model.init_hidden()
-            output, hidden = model(vectors, hidden)
-
-        lossy = loss_(output, labels)
-        lossy.backward()
-        torch.nn.utils.clip_grad_norm(model.parameters(), 5.0)
-        optim.step()
-
-        if step % total_batches == 0:
-            if epoch % 5 == 0:
-                print("Epoch %i; Step %i; Loss %f; Train acc: %f; Dev acc %f"
-                      % (epoch, step, lossy.data[0], \
-                         evaluate(model, train_eval_iter, lstm), \
-                         evaluate(model, dev_iter, lstm)))
-            epoch += 1
-        step += 1
-
+            # if (i + 1) % (batch_size * 4) == 0:
+            #     train_acc = test_model(train_loader, model, 1, cuda)
+            #     print("Epoch: [{0}/{1}], Step: [{2}/{3}], Loss: {4}, Train Acc: {5}".format(
+            #         epoch + 1, num_epochs, i + 1, length // batch_size, loss.data[0], train_acc))
+            #     print('The gradient is {}'.format(str(calculate_gradient(model))))
+            #     test_acc = test_model(test_loader, model, 1, cuda)
+            #     print(test_acc)
 
 
 if __name__ == '__main__':
@@ -83,18 +95,17 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--cuda', action='store_true', help='use CUDA')
     args = parser.parse_args()
-    args.batch_size
-    #train_data_set = construct_data_set(args.train_data_dir)
+    train_data_set = construct_data_set(args.train_data_dir)
     test_data_set = construct_data_set(args.test_data_dir)
-    processed_train_data, gram_indexer = process_text_dataset(test_data_set, args.window_size, args.ngram_n)
-    #processed_test, _ = process_text_dataset(test_data_set, args.window_size, args.ngram_n, ngram_indexer=gram_indexer)
+    processed_train_data, gram_indexer = process_text_dataset(train_data_set, args.window_size, args.ngram_n)
+    processed_test, _ = process_text_dataset(test_data_set, args.window_size, args.ngram_n, ngram_indexer=gram_indexer)
     train_loader = construct_data_loader(processed_train_data, args.batch_size, shuffle=True)
-    #test_loader = construct_data_loader(processed_test, args.batch_size, shuffle=False)
+    test_loader = construct_data_loader(processed_test, args.batch_size, shuffle=False)
     attend_model = AttendForwardNet(len(gram_indexer), args.embedding_size, args.hidden_size, args.output_size, args.dropout)
-    self_attend_model = SelfAttentionForwardNet(len(gram_indexer), args.embedding_size, args.hidden_size, args.output_size, args.dropout)
-    self_aligned_model = SelfAttentionForwardNetAligned(len(gram_indexer), args.embedding_size, args.hidden_size, args.output_size, args.dropout)
-    compare_model = CompareForwardNet(len(gram_indexer), args.embedding_size, args.hidden_size, args.output_size, args.dropout)
-    aggregate_model = AggregateForwardNet(len(gram_indexer), args.embedding_size, args.hidden_size, args.hidden_size, args.output_size, args.dropout)
+    self_attend_model = SelfAttentionForwardNet(args.embedding_size, args.hidden_size, args.output_size, args.dropout)
+    self_aligned_model = SelfAttentionForwardNetAligned(args.embedding_size, args.hidden_size, args.output_size, args.dropout)
+    compare_model = CompareForwardNet(args.embedding_size, args.hidden_size, args.output_size, args.dropout)
+    aggregate_model = AggregateForwardNet(args.embedding_size, args.hidden_size, args.hidden_size, args.output_size, args.dropout)
 
     model_list = [attend_model, self_attend_model, self_aligned_model, compare_model, aggregate_model]
     optimizer = torch.optim.Adam([model.parameters() for model in model_list], lr=args.learning_rate)

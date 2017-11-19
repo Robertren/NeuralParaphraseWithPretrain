@@ -25,12 +25,11 @@ class AttendForwardNet(nn.Module):
         return data
 
 
-
 class SelfAttentionForwardNet(nn.Module):
     """
     The model which help calculate self attention to encode relationships between words with each sentence
     """
-    def __init__(self, vocab_size, embedding_size, hidden_size, output_size, p):
+    def __init__(self, embedding_size, hidden_size, output_size, p):
         super(SelfAttentionForwardNet, self).__init__()
         self.linear1 = nn.Linear(embedding_size, hidden_size)
         self.relu = nn.ReLU()
@@ -53,7 +52,7 @@ class SelfAttentionForwardNetAligned(nn.Module):
     The model which help calculate self attention to encode relationships between words with each sentence
     """
 
-    def __init__(self, vocab_size, embedding_size, hidden_size, output_size, p):
+    def __init__(self, embedding_size, hidden_size, output_size, p):
         super(SelfAttentionForwardNetAligned, self).__init__()
         self.linear1 = nn.Linear(embedding_size, hidden_size)
         self.relu = nn.ReLU()
@@ -74,7 +73,7 @@ class CompareForwardNet(nn.Module):
     This is the feed forward network to compare aligned phrases
     """
 
-    def __init__(self, vocab_size, embedding_size, hidden_size, output_size, p):
+    def __init__(self, embedding_size, hidden_size, output_size, p):
         super(CompareForwardNet, self).__init__()
         self.linear1 = nn.Linear(embedding_size, hidden_size)
         self.relu = nn.ReLU()
@@ -96,7 +95,7 @@ class AggregateForwardNet(nn.Module):
         give a prediction of the label.
         """
 
-        def __init__(self, vocab_size, embedding_size, hidden_size1, hidden_size2, output_size, p=0.1):
+        def __init__(self, embedding_size, hidden_size1, hidden_size2, output_size, p=0.1):
             super(AggregateForwardNet, self).__init__()
             self.linear1 = nn.Linear(embedding_size, hidden_size1)
             self.relu = nn.ReLU()
