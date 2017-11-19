@@ -99,4 +99,4 @@ if __name__ == '__main__':
     model_list = [attend_model, self_attend_model, self_aligned_model, compare_model, aggregate_model]
     optimizer = torch.optim.Adam([model.parameters() for model in model_list], lr=args.learning_rate)
     train_model(args.num_epochs, optimizer, train_loader, test_loader, args.cuda,
-                args.batch_size, len(processed_train_data), args.model_dir)
+    args.batch_size, len(processed_train_data), args.model_dir)
