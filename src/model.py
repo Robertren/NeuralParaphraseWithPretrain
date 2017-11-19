@@ -6,12 +6,20 @@ class AttendForwardNet(nn.module):
     """
     First Attend Feed Forward Network to calculate e_ij
     """
-    def __init__(self):
+    def __init__(self, vocab_size, embedding_size, hidden_size, output_size):
         super(AttendForwardNet, self).__init__()
-        pass
+        self.embedding = nn.Embedding(vocab_size, embedding_size)
+        self.layer1 = nn.Linear(embedding_size, hidden_size)
+        self.layer2 = nn.Linear(hidden_size, output_size)
 
-    def forward(self):
-        return
+
+    def forward(self, index):
+        data = self.embedding(index)
+        data = self.layer1(data)
+        data = self.layer2(data)
+        return data
+
+
 
 
 class SelfAttentionForwardNet(nn.module):
@@ -65,4 +73,5 @@ class AggregateForwardNet(nn.module):
             pass
 
         def forward(self):
+            # dropout 0.1
             return
