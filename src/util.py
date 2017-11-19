@@ -9,6 +9,8 @@ import string
 import numpy as np
 import itertools
 translator = str.maketrans('', '', string.punctuation)
+MAX_SENTENCE_LENGTH = 20
+MAX_PHRASES_LENGTH = 8
 
 
 class ParaphraseData:
@@ -25,13 +27,9 @@ class ParaphraseData:
         self.label = label
 
     def set_gram_counter(self):
-        gram_list = []
-        for index in len(self.ngrams_a):
-            gram_list += list(itertools.chain.from_iterable(self.ngrams_a[index]))
-        for index in len(self.ngrams_b):
-            gram_list += list(itertools.chain.from_iterable(self.ngrams_b[index]))
+        gram_list = list(itertools.chain.from_iterable(self.ngrams_a))
+        gram_list += list(itertools.chain.from_iterable(self.ngrams_b))
         self.gram_counter = Counter(gram_list)
-
 
     def set_ngram(self, ngrams_a, ngrams_b):
         self.ngrams_a = ngrams_a
@@ -39,8 +37,25 @@ class ParaphraseData:
 
     # TODO: Need to think about here
     def set_ngrams_idx(self, ngrams_idx_a, ngrams_idx_b):
-        self.ngrams_idx_a = ngrams_idx_a
-        self.ngrams_idx_b = ngrams_idx_b
+        self.ngrams_idx_a = self.tailor(ngrams_idx_a)
+        self.ngrams_idx_b = self.tailor(ngrams_idx_b)
+
+    def tailor(self, ngrams_idx):
+
+        # adjust phrase length
+        sentence_length = len(ngrams_idx)
+        for index in range(len(ngrams_idx)):
+            gram_length = len(ngrams_idx[index])
+            if gram_length >= MAX_PHRASES_LENGTH:
+                ngrams_idx[index] = ngrams_idx[0: MAX_PHRASES_LENGTH]
+            else:
+                ngrams_idx[index] += [0] * (MAX_PHRASES_LENGTH - gram_length)
+
+        if sentence_length < MAX_SENTENCE_LENGTH:
+            ngrams_idx += [[0] * MAX_PHRASES_LENGTH for i in range(MAX_SENTENCE_LENGTH-sentence_length)]
+        else:
+            ngrams_idx = ngrams_idx[0: MAX_SENTENCE_LENGTH]
+        return ngrams_idx
 
 
 class ParaphraseDataset(Dataset):
@@ -128,8 +143,9 @@ def extract_ngram_from_phrases(phrases, n):
             char_ngrams = list(zip(*[padded_word[i:] for i in range(n)]))
             if char_ngrams:
                 word_ngram_list.append(char_ngrams)
-        phrases_ngram_list.append(word_ngram_list)
+        phrases_ngram_list.append(list(itertools.chain.from_iterable(word_ngram_list)))
     return phrases_ngram_list
+
 
 def extract_ngram_from_text(text, window_size, n):
     """

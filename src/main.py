@@ -50,6 +50,7 @@ if __name__ == '__main__':
     #train_data_set = construct_data_set(args.train_data_dir)
     test_data_set = construct_data_set(args.test_data_dir)
     processed_train_data, gram_indexer = process_text_dataset(test_data_set, args.window_size, args.ngram_n)
+    print(len(gram_indexer))
     #processed_test, _ = process_text_dataset(test_data_set, args.window_size, args.ngram_n, ngram_indexer=gram_indexer)
     train_loader = construct_data_loader(processed_train_data, args.batch_size, shuffle=True)
     #test_loader = construct_data_loader(processed_test, args.batch_size, shuffle=False)
