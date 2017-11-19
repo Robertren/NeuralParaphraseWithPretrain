@@ -7,6 +7,7 @@ from tqdm import tqdm
 import pandas as pd
 import string
 import numpy as np
+import itertools
 translator = str.maketrans('', '', string.punctuation)
 
 
@@ -22,6 +23,15 @@ class ParaphraseData:
         """
         self.raw_text = raw_text
         self.label = label
+
+    def set_gram_counter(self):
+        gram_list = []
+        for index in len(self.ngrams_a):
+            gram_list += list(itertools.chain.from_iterable(self.ngrams_a[index]))
+        for index in len(self.ngrams_b):
+            gram_list += list(itertools.chain.from_iterable(self.ngrams_b[index]))
+        self.gram_counter = Counter(gram_list)
+
 
     def set_ngram(self, ngrams_a, ngrams_b):
         self.ngrams_a = ngrams_a
@@ -114,14 +124,12 @@ def extract_ngram_from_phrases(phrases, n):
         for word in phrase:
             padded_word = "[" + word + "]"
             if len(padded_word) < n:
-                word_ngram_list.append(tuple(list(padded_word)))
+                word_ngram_list.append([tuple(list(padded_word))])
             char_ngrams = list(zip(*[padded_word[i:] for i in range(n)]))
             if char_ngrams:
-                word_ngram_list.append(char_ngrams[0])
-            word_ngram_list.append(char_ngrams)
-            phrases_ngram_list.append(word_ngram_list)
+                word_ngram_list.append(char_ngrams)
+        phrases_ngram_list.append(word_ngram_list)
     return phrases_ngram_list
-
 
 def extract_ngram_from_text(text, window_size, n):
     """
@@ -162,11 +170,13 @@ def process_text_dataset(dataset, window_size, n, topk=None, ngram_indexer=None)
         text = dataset[i].raw_text
         ngrams_a, ngrams_b = extract_ngram_from_text(text, window_size, n)
         dataset[i].set_ngram(ngrams_a=ngrams_a, ngrams_b=ngrams_b)
+        if not ngram_indexer:
+            dataset[i].set_gram_counter()
+
     # select top k ngram
     # TODO: Get pre-trained ngram indexer here
     if ngram_indexer is None:
-        print()
-        ngram_indexer = construct_ngram_indexer([datum.ngrams_a for datum in dataset], topk)
+        ngram_indexer = construct_ngram_indexer([datum.gram_counter for datum in dataset], topk)
         #ngram_indexer.update(construct_ngram_indexer([datum.ngrams_b for datum in dataset], topk))
     # vectorize each datum
     for i in range(len(dataset)):
