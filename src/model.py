@@ -1,27 +1,23 @@
 import torch
 import torch.nn as nn
 
-
 class AttendForwardNet(nn.Module):
     """
     First Attend Feed Forward Network to calculate e_ij
     """
-    def __init__(self, vocab_size, embedding_size, hidden_size, output_size, p):
+    def __init__(self, embedding_size, hidden_size, output_size, p):
         super(AttendForwardNet, self).__init__()
-        self.embedding = nn.Embedding(vocab_size + 1, embedding_size, padding_idx = 0)
         self.linear1 = nn.Linear(embedding_size, hidden_size)
         self.relu = nn.ReLU()
         self.linear2 = nn.Linear(hidden_size, output_size)
         self.dropout = nn.Dropout(p)
 
-
-    def forward(self, index):
-        data = self.embedding(index)
+    def forward(self, data):
         data = self.dropout(self.linear1(data))
         data = self.relu(data)
         data = self.dropout(self.linear2(data))
         data = self.relu(data)
-        data = data.sum(0)
+        # [Batch_size, MAX_phrase_length ,output_size]
         return data
 
 
