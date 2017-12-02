@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class AttendForwardNet(nn.Module):
     """
     First Attend Feed Forward Network to calculate e_ij
@@ -37,7 +38,6 @@ class SelfAttentionForwardNet(nn.Module):
         data = self.relu(data)
         data = self.dropout(self.linear2(data))
         data = self.relu(data)
-        data = data.sum(0)
         return data
 
 
@@ -60,7 +60,6 @@ class SelfAttentionForwardNetAligned(nn.Module):
         data = self.relu(data)
         data = self.dropout(self.linear2(data))
         data = self.relu(data)
-        data = data.sum(0)
         return data
 
 
@@ -69,9 +68,9 @@ class CompareForwardNet(nn.Module):
     This is the feed forward network to compare aligned phrases
     """
 
-    def __init__(self, embedding_size, hidden_size, output_size, p):
+    def __init__(self, compare_emb_size, hidden_size, output_size, p):
         super(CompareForwardNet, self).__init__()
-        self.linear1 = nn.Linear(embedding_size, hidden_size)
+        self.linear1 = nn.Linear(compare_emb_size, hidden_size)
         self.relu = nn.ReLU()
         self.linear2 = nn.Linear(hidden_size, output_size)
         self.dropout = nn.Dropout(p)
@@ -81,7 +80,6 @@ class CompareForwardNet(nn.Module):
         data = self.relu(data)
         data = self.dropout(self.linear2(data))
         data = self.relu(data)
-        data = data.sum(0)
         return data
 
 
@@ -91,14 +89,14 @@ class AggregateForwardNet(nn.Module):
         give a prediction of the label.
         """
 
-        def __init__(self, embedding_size, hidden_size1, hidden_size2, output_size, p=0.1):
+        def __init__(self, agg_emb_size, hidden_size1, hidden_size2, label_size, p=0.1):
             super(AggregateForwardNet, self).__init__()
-            self.linear1 = nn.Linear(embedding_size, hidden_size1)
+            self.linear1 = nn.Linear(agg_emb_size, hidden_size1)
             self.relu = nn.ReLU()
             self.linear2 = nn.Linear(hidden_size1, hidden_size2)
-            self.linear3 = nn.Linear(hidden_size2, output_size)
+            self.linear3 = nn.Linear(hidden_size2, label_size)
             self.dropout = nn.Dropout(p)
-            self.softmax = nn.LogSoftmax()
+            #self.softmax = nn.LogSoftmax()
 
         def forward(self, data):
             # dropout 0.1
@@ -106,6 +104,5 @@ class AggregateForwardNet(nn.Module):
             data = self.relu(data)
             data = self.dropout(self.linear2(data))
             data = self.relu(data)
-            output = self.softmax(self.linear3(data))
-            output = output.sum(0)
-            return output
+            output = nn.functional.sigmoid(self.linear3(data.float()))
+            return output.view(-1)
