@@ -8,16 +8,17 @@ class AttendForwardNet(nn.Module):
     """
     def __init__(self, embedding_size, hidden_size, output_size, p):
         super(AttendForwardNet, self).__init__()
-        self.linear1 = nn.Linear(embedding_size, hidden_size)
+        self.attend_linear1 = nn.Linear(embedding_size, hidden_size)
+        self.batch_norm = nn.BatchNorm1d(20)
         self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(hidden_size, output_size)
+        self.attend_linear2 = nn.Linear(hidden_size, output_size)
         self.dropout = nn.Dropout(p)
 
     def forward(self, data):
-        data = self.dropout(self.linear1(data))
+        data = self.dropout(self.attend_linear1(data))
         data = self.relu(data)
-        data = self.dropout(self.linear2(data))
-        data = self.relu(data)
+        data = self.batch_norm(data)
+        data = self.dropout(self.attend_linear2(data))
         # [Batch_size, MAX_phrase_length ,output_size]
         return data
 
@@ -28,16 +29,17 @@ class SelfAttentionForwardNet(nn.Module):
     """
     def __init__(self, embedding_size, hidden_size, output_size, p):
         super(SelfAttentionForwardNet, self).__init__()
-        self.linear1 = nn.Linear(embedding_size, hidden_size)
+        self.attention_linear1 = nn.Linear(embedding_size, hidden_size)
+        self.batch_norm = nn.BatchNorm1d(20)
         self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(hidden_size, output_size)
+        self.attention_linear2 = nn.Linear(hidden_size, output_size)
         self.dropout = nn.Dropout(p)
 
     def forward(self, data):
-        data = self.dropout(self.linear1(data))
+        data = self.dropout(self.attention_linear1(data))
         data = self.relu(data)
-        data = self.dropout(self.linear2(data))
-        data = self.relu(data)
+        data = self.batch_norm(data)
+        data = self.dropout(self.attention_linear2(data))
         return data
 
 
@@ -50,16 +52,17 @@ class SelfAttentionForwardNetAligned(nn.Module):
 
     def __init__(self, embedding_size, hidden_size, output_size, p):
         super(SelfAttentionForwardNetAligned, self).__init__()
-        self.linear1 = nn.Linear(embedding_size, hidden_size)
+        self.attention_aligned_linear1 = nn.Linear(embedding_size, hidden_size)
+        self.batch_norm = nn.BatchNorm1d(20)
         self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(hidden_size, output_size)
+        self.attention_aligned_linear2 = nn.Linear(hidden_size, output_size)
         self.dropout = nn.Dropout(p)
 
     def forward(self, data):
-        data = self.dropout(self.linear1(data))
+        data = self.dropout(self.attention_aligned_linear1(data))
         data = self.relu(data)
-        data = self.dropout(self.linear2(data))
-        data = self.relu(data)
+        data = self.batch_norm(data)
+        data = self.dropout(self.attention_aligned_linear2(data))
         return data
 
 
@@ -70,16 +73,17 @@ class CompareForwardNet(nn.Module):
 
     def __init__(self, compare_emb_size, hidden_size, output_size, p):
         super(CompareForwardNet, self).__init__()
-        self.linear1 = nn.Linear(compare_emb_size, hidden_size)
+        self.compare_linear1 = nn.Linear(compare_emb_size, hidden_size)
+        self.batch_norm = nn.BatchNorm1d(20)
         self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(hidden_size, output_size)
+        self.compare_linear2 = nn.Linear(hidden_size, output_size)
         self.dropout = nn.Dropout(p)
 
     def forward(self, data):
-        data = self.dropout(self.linear1(data))
+        data = self.dropout(self.compare_linear1(data))
         data = self.relu(data)
-        data = self.dropout(self.linear2(data))
-        data = self.relu(data)
+        data = self.batch_norm(data)
+        data = self.dropout(self.compare_linear2(data))
         return data
 
 
@@ -91,18 +95,15 @@ class AggregateForwardNet(nn.Module):
 
         def __init__(self, agg_emb_size, hidden_size1, hidden_size2, label_size, p=0.1):
             super(AggregateForwardNet, self).__init__()
-            self.linear1 = nn.Linear(agg_emb_size, hidden_size1)
+            self.agg_linear1 = nn.Linear(agg_emb_size, hidden_size1)
             self.relu = nn.ReLU()
-            self.linear2 = nn.Linear(hidden_size1, hidden_size2)
-            self.linear3 = nn.Linear(hidden_size2, label_size)
+            self.agg_linear2 = nn.Linear(hidden_size1, hidden_size2)
+            self.agg_linear3 = nn.Linear(hidden_size2, label_size)
             self.dropout = nn.Dropout(p)
-            #self.softmax = nn.LogSoftmax()
 
         def forward(self, data):
-            # dropout 0.1
-            data = self.dropout(self.linear1(data))
+            data = self.dropout(self.agg_linear1(data))
             data = self.relu(data)
-            data = self.dropout(self.linear2(data))
-            data = self.relu(data)
-            output = nn.functional.sigmoid(self.linear3(data.float()))
+            data = self.dropout(self.agg_linear2(data))
+            output = nn.functional.sigmoid(self.agg_linear3(data.float()))
             return output.view(-1)
