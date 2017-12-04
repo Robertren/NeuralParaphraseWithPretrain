@@ -41,6 +41,7 @@ def pretrain_model(model_list, num_epochs, optimizer, pretrain_loader, dev_loade
         dev_acc = test_model(dev_loader, model_list, 1, cuda, pre_char_embedding)
         print("Here is the validation set accuracy {}".format(str(dev_acc)))
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--embedding_size', type=int, default=50)
