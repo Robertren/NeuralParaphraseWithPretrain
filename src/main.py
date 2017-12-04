@@ -110,8 +110,6 @@ def get_sentence_embedding(char_embedding, index, cuda):
     index = index.view(batch_size * seq_len, phrase_len)
     # [B*seq_len, 8]
     data = char_embedding(index)
-    if cuda:
-        data = data.cuda()
     # [B*seq_len, 8, d]
     data = data.sum(1)
     # [B*seq_len, d]
@@ -196,7 +194,7 @@ def train_model(model_list, num_epochs, optimizer, train_loader, test_loader, cu
                                           list(self_aligned_model.parameters()) + list(compare_model.parameters()) +
                                           list(aggregate_model.parameters()) + list(char_embedding.parameters()), 0.25)
             optimizer.step()
-            if (iter + 1) % (batch_size*4) == 0:
+            if (iter + 1) % (batch_size*32) == 0:
                 print("Start testing")
                 train_acc = test_model(train_loader, model_list, 1, cuda, char_embedding)
                 print(train_acc)
@@ -258,8 +256,15 @@ if __name__ == '__main__':
 
     # If there are hdf5 files saved, use them
     train_loader = construct_data_loader(os.path.join(args.hdf5_dir, "train.hdf5"), args.batch_size, shuffle=True)
-    dev_loader = construct_data_loader(os.path.join(args.hdf5_dir, "dev.hdf5"),  1, shuffle=False)
+    dev_loader = construct_data_loader(os.path.join(args.hdf5_dir, "dev.hdf5"),  args.batch_size, shuffle=False)
     test_loader = construct_data_loader(os.path.join(args.hdf5_dir, "test.hdf5"), args.batch_size, shuffle=False)
+
+    # Get embeddings
+    if args.pretrained_embedding:
+        char_embedding = torch.load(args.pretrained_embedding)
+    else:
+        char_embedding = nn.Embedding(args.vocab_size+1, embedding_dim=args.embedding_size, padding_idx=0)
+        char_embedding.weight.data.uniform_(-1.0, 1.0)
 
     # Define models
     attend_model = AttendForwardNet(args.embedding_size,
@@ -291,13 +296,8 @@ if __name__ == '__main__':
         self_aligned_model.cuda()
         compare_model.cuda()
         aggregate_model.cuda()
+        char_embedding.cuda()
 
-
-    if args.pretrained_embedding:
-        char_embedding = torch.load(args.pretrained_embedding)
-    else:
-        char_embedding = nn.Embedding(args.vocab_size+1, embedding_dim=args.embedding_size, padding_idx=0)
-        char_embedding.weight.data.uniform_(-1.0, 1.0)
 
     # Put model into the model lists
     model_list = [attend_model, self_attend_model, self_aligned_model, compare_model, aggregate_model]
@@ -312,9 +312,9 @@ if __name__ == '__main__':
 
     # start training
     # TODO: DEBUGGING script here. Using
-    train_model(model_list, args.num_epochs, optimizer, dev_loader, test_loader, False,
-                args.batch_size, len(dev_loader.dataset), args.model_dir, char_embedding)
+    # train_model(model_list, args.num_epochs, optimizer, dev_loader, test_loader, args.cuda,
+    #            args.batch_size, len(dev_loader.dataset), args.model_dir, char_embedding)
 
-    # train_model(model_list, args.num_epochs, optimizer, train_loader, dev_loader, False,
-    #             args.batch_size, len(train_loader.dataset), args.model_dir, char_embedding)
+    train_model(model_list, args.num_epochs, optimizer, train_loader, dev_loader, args.cuda,
+                args.batch_size, len(train_loader.dataset), args.model_dir, char_embedding)
 
