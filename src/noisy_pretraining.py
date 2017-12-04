@@ -12,8 +12,8 @@ from model import *
 from tqdm import tqdm
 
 
-def pretrain_model(model_list, num_epochs, optimizer, pretrain_loader, cuda,
-                   batch_size, length, pre_emb_path, pre_char_embedding):
+def pretrain_model(model_list, num_epochs, optimizer, pretrain_loader, dev_loader,
+                   cuda, batch_size, length, pre_emb_path, pre_char_embedding):
     for epoch in range(num_epochs):
         # TODO: Save model torch.save(model.state_dict(), model_dir + "epoch{0}.pth".format(str(epoch)))
         torch.save(pre_char_embedding, open(pre_emb_path + "_epoch{}.bin".format(str(epoch)), "wb"))
@@ -38,7 +38,8 @@ def pretrain_model(model_list, num_epochs, optimizer, pretrain_loader, cuda,
         print(train_acc)
         print("Epoch: [{0}/{1}], Step: [{2}/{3}], Loss: {4}, Train Acc: {5}".format(
               epoch + 1, num_epochs, iter + 1, length // batch_size, loss.data[0], train_acc))
-
+        dev_acc = test_model(dev_loader, model_list, 1, cuda, pre_char_embedding)
+        print("Here is the validation set accuracy {}".format(str(dev_acc)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -55,6 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--vocab_path', type=str, default="../data/vocab/vocab_20000.pkl")
     parser.add_argument('--hdf5_dir', type=str, default="../data/hdf5")
     parser.add_argument('--pretained_data_dir', type=str, default="../data/Quora_question_pair_partition/paralex.tsv")
+    parser.add_argument('--dev_data_dir', type=str, default="../data/Quora_question_pair_partition/dev.tsv")
     parser.add_argument('--pre_emb_path', type=str, default="../model/pre_trained_embedding")
     parser.add_argument('--window_size', type=int, default=1)
     parser.add_argument('--model_dir', type=str, default="../model")
@@ -108,12 +110,16 @@ if __name__ == '__main__':
                                  list(aggregate_model.parameters()) + list(pre_char_embedding.parameters()),
                                  lr=args.learning_rate)
     if not os.path.exists(os.path.join(args.hdf5_dir, "pretrained.hdf5")):
+        dev_data_set = construct_data_set(args.dev_data_dir)
         pretrain_data_set = construct_data_set(args.pretained_data_dir)
         gram_indexer = pickle.load(open(args.vocab_path, "rb"))
         processed_pretrain, _ = process_text_dataset(pretrain_data_set, args.window_size,
                                                      args.ngram_n, ngram_indexer=gram_indexer)
+        processed_dev, _ = process_text_dataset(dev_data_set, args.window_size, args.ngram_n,
+                                                ngram_indexer=gram_indexer)
         save_to_hdf5(processed_pretrain, os.path.join(args.hdf5_dir, "pretrained.hdf5"))
     pretrain_loader = construct_data_loader(os.path.join(args.hdf5_dir, "pretrained.hdf5"),
                                             args.batch_size, shuffle=False)
-    pretrain_model(model_list, args.num_epochs, optimizer, pretrain_loader, args.cuda,
+    dev_loader = construct_data_loader(os.path.join(args.hdf5_dir, "dev.hdf5"), args.batch_size, shuffle=False)
+    pretrain_model(model_list, args.num_epochs, optimizer, pretrain_loader,  dev_loader, args.cuda,
                    args.batch_size, len(pretrain_loader.dataset), args.pre_emb_path, pre_char_embedding)
