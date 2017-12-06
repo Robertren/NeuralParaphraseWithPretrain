@@ -10,6 +10,7 @@ import argparse
 from util import *
 from model import *
 from tqdm import tqdm
+import main
 
 
 def pretrain_model(model_list, num_epochs, optimizer, pretrain_loader, dev_loader,
@@ -17,6 +18,7 @@ def pretrain_model(model_list, num_epochs, optimizer, pretrain_loader, dev_loade
     for epoch in range(num_epochs):
         # TODO: Save model torch.save(model.state_dict(), model_dir + "epoch{0}.pth".format(str(epoch)))
         torch.save(pre_char_embedding, open(pre_emb_path + "_epoch{}.bin".format(str(epoch)), "wb"))
+        main.save_all_model_parameters(model_list, "../model/pretrained", pre_char_embedding, epoch)
         for iter, (sentence_data_index_a, sentence_data_index_b, label) in tqdm(enumerate(pretrain_loader)):
             sentence_data_index_a, sentence_data_index_b, label_batch = \
                 Variable(sentence_data_index_a), Variable(sentence_data_index_b), Variable(label)
@@ -56,7 +58,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_embedding', type=bool, default=False)
     parser.add_argument('--vocab_path', type=str, default="../data/vocab/vocab_20000.pkl")
     parser.add_argument('--hdf5_dir', type=str, default="../data/hdf5")
-    parser.add_argument('--pretained_data_dir', type=str, default="../data/Quora_question_pair_partition/paralex.tsv")
+    parser.add_argument('--pretained_data_dir', type=str, default="../data/Quora_question_pair_partition/paralex_final.tsv")
     parser.add_argument('--dev_data_dir', type=str, default="../data/Quora_question_pair_partition/dev.tsv")
     parser.add_argument('--pre_emb_path', type=str, default="../model/pre_trained_embedding")
     parser.add_argument('--window_size', type=int, default=1)
@@ -120,7 +122,7 @@ if __name__ == '__main__':
                                                 ngram_indexer=gram_indexer)
         save_to_hdf5(processed_pretrain, os.path.join(args.hdf5_dir, "pretrained.hdf5"))
     pretrain_loader = construct_data_loader(os.path.join(args.hdf5_dir, "pretrained.hdf5"),
-                                            args.batch_size, shuffle=False)
+                                            args.batch_size, shuffle=True)
     dev_loader = construct_data_loader(os.path.join(args.hdf5_dir, "dev.hdf5"), args.batch_size, shuffle=False)
     pretrain_model(model_list, args.num_epochs, optimizer, pretrain_loader,  dev_loader, args.cuda,
                    args.batch_size, len(pretrain_loader.dataset), args.pre_emb_path, pre_char_embedding)

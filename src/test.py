@@ -3,7 +3,6 @@ import argparse
 import torch
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--embedding_size', type=int, default=50)

@@ -220,6 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_embedding', type=bool, default=False)
     parser.add_argument('--vocab_path', type=str, default="../data/vocab/vocab")
     parser.add_argument('--hdf5_dir', type=str, default="../data/hdf5")
+    parser.add_argument('--pretrained_dir', type=str, default="../model/pretrained")
     parser.add_argument('--train_data_dir', type=str, default="../data/Quora_question_pair_partition/train.tsv")
     parser.add_argument('--test_data_dir', type=str, default="../data/Quora_question_pair_partition/test.tsv")
     parser.add_argument('--dev_data_dir', type=str, default="../data/Quora_question_pair_partition/dev.tsv")
@@ -259,13 +260,6 @@ if __name__ == '__main__':
     dev_loader = construct_data_loader(os.path.join(args.hdf5_dir, "dev.hdf5"),  args.batch_size, shuffle=False)
     test_loader = construct_data_loader(os.path.join(args.hdf5_dir, "test.hdf5"), args.batch_size, shuffle=False)
 
-    # Get embeddings
-    if args.pretrained_embedding:
-        char_embedding = torch.load(args.pretrained_embedding)
-    else:
-        char_embedding = nn.Embedding(args.vocab_size+1, embedding_dim=args.embedding_size, padding_idx=0)
-        char_embedding.weight.data.uniform_(-1.0, 1.0)
-
     # Define models
     attend_model = AttendForwardNet(args.embedding_size,
                                     args.hidden_size,
@@ -279,15 +273,27 @@ if __name__ == '__main__':
                                                         args.hidden_size,
                                                         args.output_size,
                                                         args.dropout)
-    compare_model = CompareForwardNet(args.embedding_size*3,
+    compare_model = CompareForwardNet(args.embedding_size * 3,
                                       args.hidden_size,
                                       args.output_size,
                                       args.dropout)
-    aggregate_model = AggregateForwardNet(args.output_size*2,
+    aggregate_model = AggregateForwardNet(args.output_size * 2,
                                           args.hidden_size,
                                           args.output_size,
                                           args.label_size,
                                           args.dropout)
+    # Get embeddings
+    if args.pretrained_embedding:
+        char_embedding = torch.load(args.pretrained_embedding)
+        attend_model.load_state_dict(torch.load(os.path.join(args.pretrained_dir, "attend_model_epoch10.pth")))
+        self_attend_model.load_state_dict(torch.load(os.path.join(args.pretrained_dir, "self_attend_model_epoch10.pth")))
+        self_aligned_model.load_state_dict(torch.load(os.path.join(args.pretrained_dir, "self_aligned_model_epoch10.pth")))
+        compare_model.load_state_dict(torch.load(os.path.join(args.pretrained_dir, "compare_model_epoch10.pth")))
+        aggregate_model.load_state_dict(torch.load(os.path.join(args.pretrained_dir, "aggregate_model_epoch10.pth")))
+    else:
+        char_embedding = nn.Embedding(args.vocab_size+1, embedding_dim=args.embedding_size, padding_idx=0)
+        char_embedding.weight.data.uniform_(-1.0, 1.0)
+
     print(args.cuda)
     if args.cuda:
         print("Using GPU")
