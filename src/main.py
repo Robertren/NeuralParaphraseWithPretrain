@@ -26,17 +26,18 @@ def model_inference(model_list, sentence_data_index_a, sentence_data_index_b, ch
     attend_phrase_b = attend_model(sentence_data_b)
 
     # batch_size, phrase_size, out_size = batch_phrase_a.size()
-    alpha, beta = calculate_aligned_phrases(attend_phrase_a, attend_phrase_b, sentence_data_a,
-                                            sentence_data_b, None, self_attention=False)
+    # The attention matrix is only used on attention matrix
+    alpha, beta, attention_matrix = calculate_aligned_phrases(attend_phrase_a, attend_phrase_b, sentence_data_a,
+                                                                sentence_data_b, None, self_attention=False)
 
     # Self attend here
     self_attend_phrase_a = self_attend_model(sentence_data_a)
     self_attend_phrase_b = self_aligned_model(sentence_data_b)
     # TODO: Bias to look at here
-    self_aligned_phrase_a, _ = calculate_aligned_phrases(self_attend_phrase_a, self_attend_phrase_a,
+    self_aligned_phrase_a, _, _ = calculate_aligned_phrases(self_attend_phrase_a, self_attend_phrase_a,
                                                          sentence_data_a, sentence_data_a,
                                                          None, self_attention=False)
-    self_aligned_phrase_b, _ = calculate_aligned_phrases(self_attend_phrase_b, self_attend_phrase_b,
+    self_aligned_phrase_b, _, _ = calculate_aligned_phrases(self_attend_phrase_b, self_attend_phrase_b,
                                                          sentence_data_b, sentence_data_b,
                                                          None, self_attention=False)
 
@@ -59,7 +60,7 @@ def model_inference(model_list, sentence_data_index_a, sentence_data_index_b, ch
     sentence_representation = torch.cat((summation_sentence_data_a, summation_sentence_data_b), 1)
     outputs = aggregate_model(sentence_representation)
 
-    return outputs
+    return outputs, attention_matrix
 
 
 def calculate_aligned_phrases(phrases_a, phrases_b, origin_phrases_a, origin_phrases_b, biases, self_attention = False):
@@ -86,7 +87,7 @@ def calculate_aligned_phrases(phrases_a, phrases_b, origin_phrases_a, origin_phr
         div2 = exp / exp.sum(1, keepdim=True)
         alpha, beta = torch.matmul(div2.transpose(2, 1), origin_phrases_a), torch.matmul(div1, origin_phrases_b)
     # else:
-    return alpha, beta
+    return alpha, beta, dot_products
 
 
 def concat_representation(phrases, aligned_phrase):
