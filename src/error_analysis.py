@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--vocab_path', type=str, default="../data/vocab/vocab")
     parser.add_argument('--hdf5_dir', type=str, default="../data/hdf5")
     parser.add_argument('--pretrained_dir', type=str, default="../model/final/char_embedding_epoch49.bin")
-    parser.add_argument('--test_data_dir', type=str, default="../data/Quora_question_pair_partition/err.tsv")
+    parser.add_argument('--test_data_dir', type=str, default="../data/Quora_question_pair_partition/subset.tsv")
     parser.add_argument('--window_size', type=int, default=1)
     parser.add_argument('--label_encoder_dir', type=str, default="../data/french_test/label_encoder.bin")
     parser.add_argument('--model_dir', type=str, default="../model/final")
@@ -81,14 +81,16 @@ if __name__ == '__main__':
     # Get the output for dataloader
     true_labels = []
     predictions = []
+    attention_matrix_list = []
     for iter, (sentence_data_index_a, sentence_data_index_b, label) in tqdm(enumerate(error_loader)):
         sentence_data_index_a, sentence_data_index_b, label_batch = \
             Variable(sentence_data_index_a), Variable(sentence_data_index_b), Variable(label)
         outputs, attention_matrix = main.model_inference(model_list, sentence_data_index_a,
                                                          sentence_data_index_b, char_embedding, False)
-        print(attention_matrix)
+        attention_matrix_list.append(attention_matrix)
         prediction = 1 if outputs.data[0] > 0.3 else 0
         predictions.append(prediction)
         true_labels.append(label_batch.data[0])
+    pickle.dump(attention_matrix_list, open("../results/attention_matrix.pkl", "wb"))
     print(predictions)
     print(true_labels)
