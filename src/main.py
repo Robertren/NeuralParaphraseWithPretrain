@@ -59,7 +59,7 @@ def model_inference(model_list, sentence_data_index_a, sentence_data_index_b, ch
     summation_sentence_data_b = compared_sentence_data_b.sum(1)
     sentence_representation = torch.cat((summation_sentence_data_a, summation_sentence_data_b), 1)
     outputs = aggregate_model(sentence_representation)
-
+    # return dot products when you want to do error analysis
     return outputs, attention_matrix
 
 
@@ -87,6 +87,7 @@ def calculate_aligned_phrases(phrases_a, phrases_b, origin_phrases_a, origin_phr
         div2 = exp / exp.sum(1, keepdim=True)
         alpha, beta = torch.matmul(div2.transpose(2, 1), origin_phrases_a), torch.matmul(div1, origin_phrases_b)
     # else:
+    # return dot products when you want to do error analysis
     return alpha, beta, dot_products
 
 
