@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--vocab_path', type=str, default="../data/vocab/vocab")
     parser.add_argument('--hdf5_dir', type=str, default="../data/hdf5")
     parser.add_argument('--pretrained_dir', type=str, default="../model/final/char_embedding_epoch49.bin")
-    parser.add_argument('--test_data_dir', type=str, default="../data/Quora_question_pair_partition/subset.tsv")
+    parser.add_argument('--test_data_dir', type=str, default="../data/Quora_question_pair_partition/dev_subset copy1.tsv")
     parser.add_argument('--window_size', type=int, default=1)
     parser.add_argument('--label_encoder_dir', type=str, default="../data/french_test/label_encoder.bin")
     parser.add_argument('--model_dir', type=str, default="../model/final")
@@ -60,8 +60,10 @@ if __name__ == '__main__':
     processed_error_data, _ = util.process_text_dataset(error_analysis_data_set, args.window_size,
                                                         args.ngram_n, args.vocab_size,
                                                         ngram_indexer=gram_indexer)
+
     error_data_loader = util.save_to_hdf5(processed_error_data, os.path.join(args.hdf5_dir, "error.hdf5"))
-    error_loader = util.construct_data_loader(os.path.join(args.hdf5_dir, "error.hdf5"), 1, shuffle=True)
+    error_loader = util.construct_data_loader(os.path.join(args.hdf5_dir, "error.hdf5"), 1, shuffle=False)
+    test_loader = util.construct_data_loader(os.path.join(args.hdf5_dir, "test.hdf5"), 1, shuffle=False)
 
     # Load trained model
     char_embedding = torch.load(args.pretrained_dir, map_location=lambda storage, loc: storage)
@@ -77,20 +79,28 @@ if __name__ == '__main__':
                                                map_location=lambda storage, loc: storage))
     model_list = [attend_model, self_attend_model, self_aligned_model, compare_model, aggregate_model]
 
-
+    # Test on test set
+    main.test_model(test_loader, model_list, 1, False, char_embedding)
     # Get the output for dataloader
     true_labels = []
     predictions = []
-    attention_matrix_list = []
+    div1_matrix_list = []
+    div2_matrix_list = []
     for iter, (sentence_data_index_a, sentence_data_index_b, label) in tqdm(enumerate(error_loader)):
         sentence_data_index_a, sentence_data_index_b, label_batch = \
             Variable(sentence_data_index_a), Variable(sentence_data_index_b), Variable(label)
-        outputs, attention_matrix = main.model_inference(model_list, sentence_data_index_a,
-                                                         sentence_data_index_b, char_embedding, False)
-        attention_matrix_list.append(attention_matrix)
+        outputs = main.model_inference(model_list, sentence_data_index_a,
+                                                   sentence_data_index_b, char_embedding, False)
+        # Use the code below when you want to get attention matrix
+        # outputs, div1, div2 = main.model_inference(model_list, sentence_data_index_a,
+        #                                                  sentence_data_index_b, char_embedding, False)
+        # div1_matrix_list.append(div1)
+        # div2_matrix_list.append(div2)
+        # The ratio 0.3 is give by the original paper
         prediction = 1 if outputs.data[0] > 0.3 else 0
         predictions.append(prediction)
         true_labels.append(label_batch.data[0])
-    pickle.dump(attention_matrix_list, open("../results/attention_matrix.pkl", "wb"))
+    # pickle.dump(div1_matrix_list, open("../results/div1_matrix_list_unnormal.pkl", "wb"))
+    # pickle.dump(div2_matrix_list, open("../results/div2_matrix_list_unnormal.pkl", "wb"))
     print(predictions)
     print(true_labels)

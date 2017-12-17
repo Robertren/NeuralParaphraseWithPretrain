@@ -11,7 +11,7 @@ import itertools
 import h5py
 translator = str.maketrans('', '', string.punctuation)
 MAX_SENTENCE_LENGTH = 20
-MAX_PHRASES_LENGTH = 8
+MAX_PHRASES_LENGTH = 15
 
 
 class ParaphraseData:
@@ -201,6 +201,8 @@ def process_text_dataset(dataset, window_size, n, topk=None, ngram_indexer=None)
     for i in range(len(dataset)):
         dataset[i].set_ngrams_idx(ngrams_idx_a=phrases_ngrams_to_index(dataset[i].ngrams_a, ngram_indexer),
                                   ngrams_idx_b=phrases_ngrams_to_index(dataset[i].ngrams_b, ngram_indexer))
+        print(dataset[i].ngrams_a, dataset[i].ngrams_b)
+        print(dataset[i].ngrams_idx_a, dataset[i].ngrams_idx_b)
     return dataset, ngram_indexer
 
 
